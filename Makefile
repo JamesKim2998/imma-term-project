@@ -13,4 +13,4 @@ convert_to_pdf:
 	rm notebooks/Problem3.html
 
 archive_report:
-	zip -b report_group3.zip report
+	zip -r report_group3.zip report
