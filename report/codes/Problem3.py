@@ -135,7 +135,7 @@ print(freq_list[:20])
 
 # 이것을 `numpy` 모듈의 `log` 함수를 이용하여, log scale로 변환한 후 플롯팅을 해줍니다.
 
-# In[12]:
+# In[16]:
 
 
 freq_list, rank_list = zipf_law(tokenized_words)
@@ -149,8 +149,7 @@ plt.legend()
 plt.show()
 
 
-# Zipf's law는 모든 단어의 빈도는 해당 단어의 순위에 반비례한다는 규칙입니다. Zipf's law는 빈도를 f, 순위를 r이라고 하면 r X f = k 로 쓸 수 있습니다. 각 항에 로그를 취해서 log(r X f) = log(r) + log(f) = log(k) = k'로 변형할 수 있습니다.
-# 따라서 Zipf's law에 따르면 빈도와 순위에 log를 취해서 플롯팅을 하면 음의 기울기의 선형함수가 나타날 것이라고 예측할 수 있습니다.
+# Zipf's law는 모든 단어의 빈도는 해당 단어의 순위에 반비례한다는 규칙입니다. Zipf's law는 빈도를 f, 순위를 r이라고 하면 r X f = k 로 쓸 수 있습니다. 각 항에 로그를 취하면 log(r X f) = log(r) + log(f) = log(k) = k'로 변형됩니다. 따라서 Zipf's law에 따르면 빈도와 순위에 log를 취해서 플롯팅을 하면 음의 기울기의 선형함수가 나타날 것이라고 예측할 수 있습니다.
 # 
 # 실제 결과도 위에서 볼 수 있듯이 그래프가 음의 기울기의 선형함수에 피팅되는 것으로 보입니다. 다만, rank가 매우 작을 때와 매우 클 때 선형추세에서 벗어나는 것을 확인할 수 있습니다.
 
@@ -169,7 +168,7 @@ print(trigram_list[:20])
 
 # 얻어진 bigram과 trigram도 위에서 unigram을 플롯팅한 것과 동일하게 log scale로 변환해서 플롯팅을 해줍니다.
 
-# In[14]:
+# In[18]:
 
 
 plt.plot(np.log(rank_list), np.log(freq_list), label='Unigram')
