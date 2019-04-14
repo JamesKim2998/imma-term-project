@@ -11,3 +11,6 @@ convert_to_pdf:
 	rm notebooks/Problem1.html
 	rm notebooks/Problem2.html
 	rm notebooks/Problem3.html
+
+archive_report:
+	zip -b report_group3.zip report
