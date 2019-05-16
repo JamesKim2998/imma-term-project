@@ -140,15 +140,28 @@ def create_word_set(word: str, wn_pos: str) -> WordSet:
     return WordSet(word, lemma, stem, wn_pos)
 
 
+freq_cache = {}
+
 def get_freq(word: str):
+    if word in freq_cache:
+        return freq_cache[word]
+
     synsets = wordnet.synsets(word)
     if len(synsets) == 0:
-        return 0
-    return synsets[0].lemmas()[0].count()
+        return 1  # 한번은 등장한 것으로 취급.
+
+    count = 1
+    for synset in synsets:
+        lemmas = synset.lemmas()
+        for lemma in lemmas:
+            count += lemma.count()
+    freq_cache[word] = count
+    return count
 
 
 def get_adjusted_freq(word_set: WordSet):
-    return max(get_freq(word_set.word), get_freq(word_set.lemma), get_freq(word_set.stem))
+    return get_freq(word_set.lemma)
+    # return max(get_freq(word_set.word), get_freq(word_set.lemma), get_freq(word_set.stem))
 
 
 def preprocess_text(text: str, filter_pos: bool) -> list:
@@ -178,7 +191,7 @@ def preprocess_text(text: str, filter_pos: bool) -> list:
 
 def calculate_query_word_boost(word_set: WordSet):
     freq = get_adjusted_freq(word_set)
-    boost = 10 / math.pow(freq + 1, 0.28)
+    boost = 10 / math.pow(freq, 0.28)
     return max(boost, 0)
 
 
@@ -200,9 +213,7 @@ def calculate_definition_boost(lemma: str) -> dict:
     boost_base = 4 / len(definition)
     for word_set in definition:
         freq = get_freq(word_set.word)
-        word_boost = boost_base
-        if freq > 0:
-            word_boost = boost_base / math.pow(freq, 0.25)
+        word_boost = boost_base / math.pow(freq, 0.25)
         if word_boost < 0.5:
             continue
 
@@ -246,13 +257,9 @@ def calculate_google_boost(word_sets: list) -> dict:
     boost_base = 20
     for (lemma, count) in word_count.items():
         freq = get_freq(lemma)
-        word_boost = boost_base
-        if freq > 0:
-            word_boost = boost_base / math.pow(freq, 0.2)
-        word_boost *= math.pow(count, 0.4)
-        if word_boost < 16:  # 23
+        if count / freq < 0.05:
             continue
-
+        word_boost = boost_base * math.pow(count / freq, 0.3)
         stem = stemmer.stem(lemma)
         results[stem] = word_boost
 

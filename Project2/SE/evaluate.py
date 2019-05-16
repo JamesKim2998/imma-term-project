@@ -70,25 +70,7 @@ def main():
     # hard_query = 'regulations considerations concerning registering freighter country'
 
     single_query = None
-    # single_query = 704
-    # single_query = 743  # "regulations considerations concerning registering freighter country"
-    # single_query = 847  # portugal
-    # single_query = 837  # eskimo, inuit -> 8893, 8894
-    # queryID: 701 score: 0.13541666666666669
-    # queryID: 712 score: 0.0625
-    # queryID: 716 score: 0.24131944444444445
-    # queryID: 727 score: 0.29733882030178316
-    # queryID: 740 score: 0.19753086419753085
-    # queryID: 743 score: 0.11111111111111112
-    # queryID: 750 score: 0.0
-    # queryID: 763 score: 0.15625
-    # queryID: 811 score: 0.25925925925925924
-    # queryID: 822 score: 0.1875
-    # queryID: 825 score: 0.15976331360946747
-
-    # queryID: 729 score: 0
-    # single_query = 702
-    # single_query = 712
+    # single_query = 701
 
     if hard_query is not None:
         results = getSingleSearchEngineResult(hard_query, False)
