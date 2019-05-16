@@ -29,14 +29,12 @@ def getSearchEngineResult(query_dict):
     return result_dict
 
 
-def getSingleSearchEngineResult(q, verbose):
-    print(q)
+def getSingleSearchEngineResult(query, verbose):
+    print(query)
+    processed_query = process_query(query)
+    print(processed_query)
 
-    words = list(filter(lambda x: x not in stopWords and x.isalpha(), map(lambda x: x.lower(), q.split(' '))))
-    new_q = process_query(words)
-    print(new_q)
-
-    q = parser.parse(new_q.lower())
+    q = parser.parse(processed_query)
     results = searcher.search(q, limit=None)
 
     if verbose:
@@ -46,18 +44,16 @@ def getSingleSearchEngineResult(q, verbose):
     return [(result.fields()['docID'], result.score) for result in results]
 
 
-def process_query(words: list) -> str:
-    # 만약 쿼리가 그렇게 길지 않다면, synonym은 찾지 않는다.
-    q = ''
-    pos_tag = nltk.pos_tag(words)
+def process_query(query: str) -> str:
     query_words = {}
-
     def add_query_word(stem_: str, boost_: float):
         if stem_ in query_words:
             query_words[stem_] = max(query_words[stem_], boost_)
         else:
             query_words[stem_] = boost_
 
+    words = list(filter(lambda x: x not in stopWords and x.isalpha(), map(lambda x: x.lower(), query.split(' '))))
+    pos_tag = nltk.pos_tag(words)
     for i in range(len(words)):
         # word가 너무 짧으면 무시한다. n-gram에서 걸리기를...
         word = words[i]
@@ -78,6 +74,15 @@ def process_query(words: list) -> str:
             for (stem, boost) in def_boosts.items():
                 add_query_word(stem, boost)
 
+    try:
+        google_result = get_google_result(query)
+        google_boost = calculate_google_boost(google_result)
+        for (stem, boost) in google_boost.items():
+            add_query_word(stem, boost)
+    except Exception as e:
+        print(e)
+
+    q = ''
     for (stem, boost) in query_words.items():
         q += stem + '^' + str(boost) + ' '
 
@@ -137,7 +142,7 @@ def get_adjusted_freq(word_set: WordSet):
     return max(get_freq(word_set.word), get_freq(word_set.lemma), get_freq(word_set.stem))
 
 
-def preprocess_text(text: str) -> list:
+def preprocess_text(text: str, filter: bool) -> list:
     def should_preserve_token(pos_tag: str) -> bool:
         if not pos_tag.isalpha(): return False
         if pos_tag in ['IN', 'CD', 'DT', 'CC', 'TO', 'MD', 'EX', 'UH']: return False
@@ -149,10 +154,13 @@ def preprocess_text(text: str) -> list:
     pos_tags = nltk.pos_tag(tokens)
     word_sets = []
     for (word, pos_tag) in pos_tags:
-        # if not (pos_tag.startswith('N') or pos_tag.startswith('V')):
-        #     continue
-        if not should_preserve_token(pos_tag):
+        if word in stopWords:
             continue
+        if filter:
+            if not word.isalpha():
+                continue
+            if not should_preserve_token(pos_tag):
+                continue
         wn_pos = get_wn_pos(pos_tag)
         word_set = create_word_set(word, wn_pos)
         word_sets.append(word_set)
@@ -172,7 +180,7 @@ def calculate_definition_boost(lemma: str) -> dict:
         return {}
     definition_text = synsets[0].definition()
 
-    definition = preprocess_text(definition_text)
+    definition = preprocess_text(definition_text, True)
     # 정의에 자주 등장하는 something, someone, somebody를 제거합니다.
     definition = list(filter(lambda x: x.word not in ['something', 'someone', 'somebody'], definition))
 
@@ -191,11 +199,57 @@ def calculate_definition_boost(lemma: str) -> dict:
 
         stem = word_set.stem
         if stem in result:
-            result[stem] = max(result[stem], word_boost)
+            result[stem] += word_boost
         else:
             result[stem] = word_boost
 
     return result
+
+
+def get_google_result(q: str):
+    word_sets = []
+    try:
+        gs = GoogleSearch(q)
+        gs.results_per_page = 25
+        results = gs.get_results()
+        for res in results:
+            word_sets += preprocess_text(res.title, False)
+            if res.desc and res.desc.text:
+                word_sets += preprocess_text(res.desc.text, False)
+    except Exception as e:
+        print(e)
+    return word_sets
+
+
+def calculate_google_boost(word_sets: list) -> dict:
+    if len(word_sets) == 0:
+        return {}
+
+    word_count = {}
+    for word_set in word_sets:
+        lemma = word_set.lemma
+        if lemma in word_count:
+            word_count[lemma] += 1
+        else:
+            word_count[lemma] = 1
+
+    results = {}
+    boost_base = 100 / len(word_sets)
+    for (lemma, count) in word_count:
+        freq = get_freq(lemma)
+        word_boost = boost_base
+        if freq > 0:
+            word_boost = boost_base / math.pow(freq, 0.25)
+        if word_boost < 1:
+            continue
+
+        stem = stemmer.stem(lemma.stem)
+        if stem in results:
+            results[stem] += word_boost
+        else:
+            results[stem] = word_boost
+
+    return results
 
 
 def generate_ngram_boost(tokens: list, count: int) -> str:
@@ -208,18 +262,3 @@ def generate_ngram_boost(tokens: list, count: int) -> str:
             ngram += tokens[i + j] + ' '
         q += ngram[:-1] + f'"^{boost}~{frame} '
     return q
-
-
-def get_google_result(q: str):
-    lemmas = []
-    try:
-        gs = GoogleSearch(q)
-        gs.results_per_page = 25
-        results = gs.get_results()
-        for res in results:
-            lemmas += preprocess_text(res.title)
-            if res.desc and res.desc.text:
-                lemmas += preprocess_text(res.desc.text)
-    except Exception as e:
-        print(e)
-    return lemmas
