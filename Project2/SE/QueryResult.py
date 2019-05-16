@@ -76,7 +76,7 @@ def process_query(words: list, lemmatizer) -> str:
                 lemma_word = lemmatizer.lemmatize(word, pos=wn_pos)
             stemmed_word = stemmer.stem(word)
 
-            freq = get_freq(lemma_word)
+            freq = max(get_freq(lemma_word), get_freq(stemmed_word), get_freq(word))
 
             boost_org = 20 / math.pow(freq + 1, 0.28)
             if boost_org < 0:
