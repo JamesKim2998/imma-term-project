@@ -221,9 +221,9 @@ def get_google_result(q: str):
         gs.results_per_page = 10
         results = gs.get_results()
         for res in results:
-            word_sets += preprocess_text(res.title, False)
+            word_sets += preprocess_text(res.title, True)
             if res.desc and res.desc.text:
-                word_sets += preprocess_text(res.desc.text, False)
+                word_sets += preprocess_text(res.desc.text, True)
     except Exception as e:
         print(e)
     return word_sets
@@ -248,8 +248,8 @@ def calculate_google_boost(word_sets: list) -> dict:
         word_boost = boost_base
         if freq > 0:
             word_boost = boost_base / math.pow(freq, 0.2)
-        word_boost *= math.pow(count, 0.3)
-        if word_boost < 12:
+        word_boost *= math.pow(count, 0.4)
+        if word_boost < 16:  # 23
             continue
 
         stem = stemmer.stem(lemma)

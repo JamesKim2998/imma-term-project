@@ -87,7 +87,8 @@ def main():
     # queryID: 825 score: 0.15976331360946747
 
     # queryID: 729 score: 0
-    # single_query = 729
+    # single_query = 702
+    # single_query = 712
 
     if hard_query is not None:
         results = getSingleSearchEngineResult(hard_query, False)
@@ -98,7 +99,7 @@ def main():
     else:
         query = query_dict[str(single_query)]
         relevant_doc = relevant_dict[str(single_query)]
-        score = evaluateSingleQuery(query, relevant_doc, True)
+        score = evaluateSingleQuery(query, relevant_doc, False)
         print(f'queryID: {single_query} score: {score}')
 
 
