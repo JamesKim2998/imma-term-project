@@ -46,9 +46,16 @@ def getSingleSearchEngineResult(query, verbose):
 
 def process_query(query: str) -> str:
     query_words = {}
+
     def add_query_word(stem_: str, boost_: float):
         if stem_ in query_words:
             query_words[stem_] = max(query_words[stem_], boost_)
+        else:
+            query_words[stem_] = boost_
+
+    def plus_query_word(stem_: str, boost_: float):
+        if stem_ in query_words:
+            query_words[stem_] += boost_
         else:
             query_words[stem_] = boost_
 
@@ -69,16 +76,17 @@ def process_query(query: str) -> str:
         stem = word_set.stem
         add_query_word(stem, word_boost)
 
-        if word_boost > 14:
+        if word_boost > 7:
             def_boosts = calculate_definition_boost(word_set.lemma)
             for (stem, boost) in def_boosts.items():
                 add_query_word(stem, boost)
 
+    # 구글 검색결과를 이용해서 query expansion을 한다.
     try:
         google_result = get_google_result(query)
         google_boost = calculate_google_boost(google_result)
         for (stem, boost) in google_boost.items():
-            add_query_word(stem, boost)
+            plus_query_word(stem, boost)
     except Exception as e:
         print(e)
 
@@ -142,7 +150,7 @@ def get_adjusted_freq(word_set: WordSet):
     return max(get_freq(word_set.word), get_freq(word_set.lemma), get_freq(word_set.stem))
 
 
-def preprocess_text(text: str, filter: bool) -> list:
+def preprocess_text(text: str, filter_pos: bool) -> list:
     def should_preserve_token(pos_tag: str) -> bool:
         if not pos_tag.isalpha(): return False
         if pos_tag in ['IN', 'CD', 'DT', 'CC', 'TO', 'MD', 'EX', 'UH']: return False
@@ -156,9 +164,9 @@ def preprocess_text(text: str, filter: bool) -> list:
     for (word, pos_tag) in pos_tags:
         if word in stopWords:
             continue
-        if filter:
-            if not word.isalpha():
-                continue
+        if not word.isalpha():
+            continue
+        if filter_pos:
             if not should_preserve_token(pos_tag):
                 continue
         wn_pos = get_wn_pos(pos_tag)
@@ -169,7 +177,7 @@ def preprocess_text(text: str, filter: bool) -> list:
 
 def calculate_query_word_boost(word_set: WordSet):
     freq = get_adjusted_freq(word_set)
-    boost = 20 / math.pow(freq + 1, 0.28)
+    boost = 10 / math.pow(freq + 1, 0.28)
     return max(boost, 0)
 
 
@@ -188,13 +196,13 @@ def calculate_definition_boost(lemma: str) -> dict:
         return {}
 
     result = {}
-    boost_base = 8 / len(definition)
+    boost_base = 4 / len(definition)
     for word_set in definition:
         freq = get_freq(word_set.word)
         word_boost = boost_base
         if freq > 0:
             word_boost = boost_base / math.pow(freq, 0.25)
-        if word_boost < 1:
+        if word_boost < 0.5:
             continue
 
         stem = word_set.stem
@@ -210,7 +218,7 @@ def get_google_result(q: str):
     word_sets = []
     try:
         gs = GoogleSearch(q)
-        gs.results_per_page = 25
+        gs.results_per_page = 10
         results = gs.get_results()
         for res in results:
             word_sets += preprocess_text(res.title, False)
@@ -234,20 +242,18 @@ def calculate_google_boost(word_sets: list) -> dict:
             word_count[lemma] = 1
 
     results = {}
-    boost_base = 100 / len(word_sets)
-    for (lemma, count) in word_count:
+    boost_base = 10
+    for (lemma, count) in word_count.items():
         freq = get_freq(lemma)
         word_boost = boost_base
         if freq > 0:
             word_boost = boost_base / math.pow(freq, 0.25)
-        if word_boost < 1:
+        word_boost *= math.pow(count, 0.25)
+        if word_boost < 2:
             continue
 
-        stem = stemmer.stem(lemma.stem)
-        if stem in results:
-            results[stem] += word_boost
-        else:
-            results[stem] = word_boost
+        stem = stemmer.stem(lemma)
+        results[stem] = word_boost
 
     return results
 
