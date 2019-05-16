@@ -76,13 +76,13 @@ def process_query(query: str) -> str:
         stem = word_set.stem
         add_query_word(stem, word_boost)
 
-        if word_boost > 14:
+        if word_boost > 7:
             def_boosts = calculate_definition_boost(word_set.lemma)
             for (stem, boost) in def_boosts.items():
                 add_query_word(stem, boost)
 
     # 구글 검색결과를 이용해서 query expansion을 한다.
-    if True:
+    if False:
         try:
             google_result = get_google_result(query)
             google_boost = calculate_google_boost(google_result)
@@ -178,7 +178,7 @@ def preprocess_text(text: str, filter_pos: bool) -> list:
 
 def calculate_query_word_boost(word_set: WordSet):
     freq = get_adjusted_freq(word_set)
-    boost = 20 / math.pow(freq + 1, 0.28)
+    boost = 10 / math.pow(freq + 1, 0.28)
     return max(boost, 0)
 
 
@@ -197,13 +197,13 @@ def calculate_definition_boost(lemma: str) -> dict:
         return {}
 
     result = {}
-    boost_base = 8 / len(definition)
+    boost_base = 4 / len(definition)
     for word_set in definition:
         freq = get_freq(word_set.word)
         word_boost = boost_base
         if freq > 0:
             word_boost = boost_base / math.pow(freq, 0.25)
-        if word_boost < 1:
+        if word_boost < 0.5:
             continue
 
         stem = word_set.stem
