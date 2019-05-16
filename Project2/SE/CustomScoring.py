@@ -36,6 +36,7 @@ from whoosh.compat import iteritems
 
 import math
 
+
 # Base classes
 
 class WeightingModel(object):
