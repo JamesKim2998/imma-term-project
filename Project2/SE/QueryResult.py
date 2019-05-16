@@ -151,11 +151,10 @@ def preprocess_text(text: str) -> list:
     pos_tags = nltk.pos_tag(tokens)
     word_sets = []
     for (word, pos_tag) in pos_tags:
-        # TODO
-        if not (pos_tag.startswith('N') or pos_tag.startswith('V')):
-            continue
-        # if not should_preserve_token(pos_tag):
+        # if not (pos_tag.startswith('N') or pos_tag.startswith('V')):
         #     continue
+        if not should_preserve_token(pos_tag):
+            continue
         wn_pos = get_wn_pos(pos_tag)
         word_set = create_word_set(word, wn_pos)
         word_sets.append(word_set)
@@ -185,9 +184,7 @@ def calculate_definition_boost(lemma: str) -> dict:
     result = {}
     boost_base = 8 / len(definition)
     for word_set in definition:
-        # TODO
-        freq = get_adjusted_freq(word_set)
-        # freq = get_freq(word_set.word)
+        freq = get_freq(word_set.word)
         word_boost = boost_base
         if freq > 0:
             word_boost = boost_base / math.pow(freq, 0.25)
