@@ -123,8 +123,6 @@ def create_word_set(word: str, wn_pos: str) -> WordSet:
     if wn_pos is not None and wn_pos != '':
         lemma = lemmatizer.lemmatize(word, pos=wn_pos)
     stem = stemmer.stem(word)
-    # TODO
-    # stem = stemmer.stem(lemma)
     return WordSet(word, lemma, stem, wn_pos)
 
 
