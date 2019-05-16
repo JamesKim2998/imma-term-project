@@ -86,6 +86,9 @@ def main():
     # queryID: 822 score: 0.1875
     # queryID: 825 score: 0.15976331360946747
 
+    # queryID: 729 score: 0
+    # single_query = 729
+
     if hard_query is not None:
         results = getSingleSearchEngineResult(hard_query, False)
         for result in results[:20]:

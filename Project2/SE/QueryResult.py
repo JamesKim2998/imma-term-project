@@ -242,14 +242,14 @@ def calculate_google_boost(word_sets: list) -> dict:
             word_count[lemma] = 1
 
     results = {}
-    boost_base = 10
+    boost_base = 20
     for (lemma, count) in word_count.items():
         freq = get_freq(lemma)
         word_boost = boost_base
         if freq > 0:
-            word_boost = boost_base / math.sqrt(freq)
-        word_boost *= math.sqrt(count)
-        if word_boost < 4:
+            word_boost = boost_base / math.pow(freq, 0.2)
+        word_boost *= math.pow(count, 0.3)
+        if word_boost < 12:
             continue
 
         stem = stemmer.stem(lemma)
