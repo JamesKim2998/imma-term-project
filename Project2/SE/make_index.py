@@ -8,9 +8,13 @@ from nltk.stem import WordNetLemmatizer
 from nltk.corpus import wordnet, stopwords
 from nltk.stem.snowball import SnowballStemmer
 
+stopWords = set(stopwords.words('english'))
+
 def should_preserve_token(token: str) -> bool:
     word = token[0]
     if not word.isalpha():
+        return False
+    if word in stopWords:
         return False
 
     pos_tag = token[1]
@@ -30,8 +34,6 @@ def get_wordnet_pos(pos_tag):
         return wordnet.NOUN
     elif pos_tag.startswith('R'):
         return wordnet.ADV
-    elif pos_tag.startswith('FW') or pos_tag.startswith('SYM'):
-        return None
     else:
         return None
 
@@ -50,10 +52,10 @@ def process_doc(doc: str):
     pos_tag = list(filter(lambda x: should_preserve_token(x), pos_tag))
     # print(pos_tag)
 
-    # lemmatized_tokens = map(lambda x: lemmatize(x, lemmatizer), pos_tag)
-    stemmed_tokens = map(lambda x: stemmer.stem(x[0]), pos_tag)
+    lemmatized_tokens = map(lambda x: lemmatize(x, lemmatizer), pos_tag)
+    # stemmed_tokens = map(lambda x: stemmer.stem(x[0]), pos_tag)
     # stemmed_tokens = map(lambda x: stemmer.stem(x), lemmatized_tokens)
-    processed_doc = ' '.join(list(stemmed_tokens))
+    processed_doc = ' '.join(list(lemmatized_tokens))
     # print(processed_doc)
 
     return processed_doc
