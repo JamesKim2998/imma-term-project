@@ -79,12 +79,13 @@ def process_query(query: str) -> str:
                 add_query_word(stem, boost)
 
     # 구글 검색결과를 이용해서 query expansion을 한다.
-    if True:
+    # if True:
+    if False:
         try:
             google_result = get_google_result(query)
             google_boost = calculate_google_boost(google_result)
             for (stem, boost) in google_boost.items():
-                plus_query_word(stem, boost)
+                add_query_word(stem, boost)
         except Exception as e:
             print(e)
 
@@ -139,26 +140,24 @@ def create_word_set(word: str, wn_pos: str) -> WordSet:
 
 freq_cache = {}
 
-def get_freq(word: str):
-    if word in freq_cache:
-        return freq_cache[word]
 
-    synsets = wordnet.synsets(word)
+def get_freq(lemma: str):
+    if lemma in freq_cache:
+        return freq_cache[lemma]
+
+    synsets = wordnet.synsets(lemma)
     if len(synsets) == 0:
-        return 1  # 한번은 등장한 것으로 취급.
+        return 0.5  # 0.8번은 등장한 것으로 취급.
 
-    count = 1
+    count = 0
     for synset in synsets:
-        lemmas = synset.lemmas()
-        for lemma in lemmas:
-            count += lemma.count()
-    freq_cache[word] = count
+        synset_lemmas = synset.lemmas()
+        for synset_lemma in synset_lemmas:
+            count += synset_lemma.count()
+    if count == 0:
+        return 0.5
+    freq_cache[lemma] = count
     return count
-
-
-def get_adjusted_freq(word_set: WordSet):
-    return get_freq(word_set.lemma)
-    # return max(get_freq(word_set.word), get_freq(word_set.lemma), get_freq(word_set.stem))
 
 
 def preprocess_text(text: str, filter_pos: bool) -> list:
@@ -187,8 +186,8 @@ def preprocess_text(text: str, filter_pos: bool) -> list:
 
 
 def calculate_query_word_boost(word_set: WordSet):
-    freq = get_adjusted_freq(word_set)
-    return 80 / math.pow(freq, 0.5)
+    freq = get_freq(word_set.lemma)
+    return 8 / math.pow(freq, 0.28)
 
 
 def calculate_definition_boost(lemma: str) -> dict:
@@ -206,9 +205,9 @@ def calculate_definition_boost(lemma: str) -> dict:
         return {}
 
     result = {}
-    boost_base = 20 / len(definition)
+    boost_base = 4 / len(definition)
     for word_set in definition:
-        freq = get_freq(word_set.word)
+        freq = get_freq(word_set.lemma)
         word_boost = boost_base / math.pow(freq, 0.5)
         if word_boost < 1:
             continue
@@ -229,7 +228,7 @@ def get_google_result(q: str):
         gs.results_per_page = 10
         results = gs.get_results()
         for res in results:
-            word_sets += preprocess_text(res.title, True)
+            # word_sets += preprocess_text(res.title, True)
             if res.desc and res.desc.text:
                 word_sets += preprocess_text(res.desc.text, True)
     except Exception as e:
@@ -250,12 +249,12 @@ def calculate_google_boost(word_sets: list) -> dict:
             word_count[lemma] = 1
 
     results = {}
-    boost_base = 30
+    boost_base = 5
     for (lemma, count) in word_count.items():
         freq = get_freq(lemma)
-        if count / freq < 0.05:
+        if count / freq < 0.02:
             continue
-        word_boost = boost_base * math.pow(count / freq, 0.3)
+        word_boost = boost_base * math.pow(count / freq, 0.28)
         stem = stemmer.stem(lemma)
         results[stem] = word_boost
 
