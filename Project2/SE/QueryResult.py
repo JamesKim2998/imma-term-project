@@ -188,7 +188,7 @@ def preprocess_text(text: str, filter_pos: bool) -> list:
 
 def calculate_query_word_boost(word_set: WordSet):
     freq = get_freq(word_set.lemma)
-    return 8 / math.pow(freq, 0.28)
+    return 7 / math.pow(freq, 0.28)
 
 
 def calculate_definition_boost(lemma: str) -> dict:
