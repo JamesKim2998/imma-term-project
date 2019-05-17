@@ -7,13 +7,11 @@ import math
 import nltk
 from nltk.stem import WordNetLemmatizer
 import nltk.tokenize
-from nltk.stem.snowball import SnowballStemmer
 from nltk.corpus import wordnet
 from xgoogle.search import GoogleSearch
 
 ix = index.open_dir("index")
 lemmatizer = WordNetLemmatizer()
-stemmer = SnowballStemmer(language='english')
 searcher = ix.searcher(weighting=scoring.ScoringFunction())
 parser = QueryParser("contents", schema=ix.schema, group=OrGroup)
 stopWords = set(stopwords.words('english'))
@@ -47,36 +45,40 @@ def getSingleSearchEngineResult(query, verbose):
 def process_query(query: str) -> str:
     query_words = {}
 
-    def add_query_word(stem_: str, boost_: float):
-        if stem_ in query_words:
-            query_words[stem_] = max(query_words[stem_], boost_)
+    def add_query_word(lemma_: str, boost_: float):
+        if lemma_ in query_words:
+            query_words[lemma_] = max(query_words[lemma_], boost_)
         else:
-            query_words[stem_] = boost_
+            query_words[lemma_] = boost_
 
-    def plus_query_word(stem_: str, boost_: float):
-        if stem_ in query_words:
-            query_words[stem_] += boost_
+    def plus_query_word(lemma_: str, boost_: float):
+        if lemma_ in query_words:
+            query_words[lemma_] += boost_
         else:
-            query_words[stem_] = boost_
+            query_words[lemma_] = boost_
 
-    words = list(filter(lambda x: x not in stopWords and x.isalpha(), map(lambda x: x.lower(), query.split(' '))))
-    pos_tag = nltk.pos_tag(words)
+    tokens = map(lambda x: x.lower(), query.split(' '))
+    words = list(filter(lambda x: x not in stopWords and x.isalpha(), tokens))
+    wn_poses = list(map(lambda x: get_wn_pos(x[1]), nltk.pos_tag(words)))
+
+    word_sets = []
     for i in range(len(words)):
+        word_sets.append(create_word_set(words[i], wn_poses[i]))
+
+    for word_set in word_sets:
         # word가 너무 짧으면 무시한다. n-gram에서 걸리기를...
-        word = words[i]
+        word = word_set.word
         if len(word) < 3:
             continue
 
-        wn_pos = get_wn_pos(pos_tag[i - 1][1])
-        word_set = create_word_set(word, wn_pos)
         word_boost = calculate_query_word_boost(word_set)
-        stem = word_set.stem
-        add_query_word(stem, word_boost)
+        lemma = word_set.lemma
+        add_query_word(lemma, word_boost)
 
         if word_boost > 15:
             def_boosts = calculate_definition_boost(word_set.lemma)
-            for (stem, boost) in def_boosts.items():
-                add_query_word(stem, boost)
+            for (def_lemma, def_boost) in def_boosts.items():
+                add_query_word(def_lemma, def_boost)
 
     # 구글 검색결과를 이용해서 query expansion을 한다.
     # if True:
@@ -84,20 +86,19 @@ def process_query(query: str) -> str:
         try:
             google_result = get_google_result(query)
             google_boost = calculate_google_boost(google_result)
-            for (stem, boost) in google_boost.items():
-                add_query_word(stem, boost)
+            for (lemma, boost) in google_boost.items():
+                add_query_word(lemma, boost)
         except Exception as e:
             print(e)
 
     q = ''
-    for (stem, boost) in query_words.items():
-        q += stem + '^' + str(boost) + ' '
+    for (lemma, boost) in query_words.items():
+        q += lemma + '^' + str(boost) + ' '
 
     # n-gram을 쿼리에 추가한다.
-    stemms = list(map(lambda x: stemmer.stem(x), words))
-    q += generate_ngram_boost(stemms, 2)
-    q += generate_ngram_boost(stemms, 3)
-    q += generate_ngram_boost(stemms, 4)
+    q += generate_ngram_boost(word_sets, 2)
+    q += generate_ngram_boost(word_sets, 3)
+    q += generate_ngram_boost(word_sets, 4)
 
     return q
 
@@ -134,8 +135,8 @@ def create_word_set(word: str, wn_pos: str) -> WordSet:
     lemma = word
     if wn_pos is not None and wn_pos != '':
         lemma = lemmatizer.lemmatize(word, pos=wn_pos)
-    stem = stemmer.stem(word)
-    return WordSet(word, lemma, stem, wn_pos)
+    # stem = stemmer.stem(word)
+    return WordSet(word, lemma, None, wn_pos)
 
 
 freq_cache = {}
@@ -212,11 +213,11 @@ def calculate_definition_boost(lemma: str) -> dict:
         if word_boost < 1:
             continue
 
-        stem = word_set.stem
-        if stem in result:
-            result[stem] += word_boost
+        lemma = word_set.lemma
+        if lemma in result:
+            result[lemma] += word_boost
         else:
-            result[stem] = word_boost
+            result[lemma] = word_boost
 
     return result
 
@@ -249,25 +250,24 @@ def calculate_google_boost(word_sets: list) -> dict:
             word_count[lemma] = 1
 
     results = {}
-    boost_base = 5
+    boost_base = 10
     for (lemma, count) in word_count.items():
         freq = get_freq(lemma)
         if count / freq < 0.02:
             continue
         word_boost = boost_base * math.pow(count / freq, 0.28)
-        stem = stemmer.stem(lemma)
-        results[stem] = word_boost
+        results[lemma] = word_boost
 
     return results
 
 
-def generate_ngram_boost(tokens: list, count: int) -> str:
+def generate_ngram_boost(word_sets: list, count: int) -> str:
     q = ''
     boost = 1
     frame = 5
-    for i in range(len(tokens) - count + 1):
+    for i in range(len(word_sets) - count + 1):
         ngram = '"'
         for j in range(count):
-            ngram += tokens[i + j] + ' '
+            ngram += word_sets[i + j].lemma + ' '
         q += ngram[:-1] + f'"^{boost}~{frame} '
     return q
