@@ -75,6 +75,7 @@ def main():
     # single_query = 743  # regulations considerations concerning registering freighter country
     # single_query = 804  # describe resolutions proposed legislation passed ban cloning humans rationale bans
     # single_query = 818  # known culture history chaco people features chaco culture national historic park
+    # single_query = 822  # give history battle big horn june 25 26 1876 referred custers stand
     # single_query = 837  # information pre 1500 history eskimo inuit people
 
     if hard_query is not None:

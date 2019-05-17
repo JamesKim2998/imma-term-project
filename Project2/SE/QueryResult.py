@@ -81,8 +81,8 @@ def process_query(query: str) -> str:
                 add_query_word(def_lemma, def_boost)
 
     # 구글 검색결과를 이용해서 query expansion을 한다.
-    # if True:
-    if False:
+    if True:
+    # if False:
         try:
             google_result = get_google_result(query)
             google_boost = calculate_google_boost(google_result)
@@ -250,10 +250,10 @@ def calculate_google_boost(word_sets: list) -> dict:
             word_count[lemma] = 1
 
     results = {}
-    boost_base = 10
+    boost_base = 2
     for (lemma, count) in word_count.items():
         freq = get_freq(lemma)
-        if count / freq < 0.02:
+        if count / freq < 0.04:
             continue
         word_boost = boost_base * math.pow(count / freq, 0.28)
         results[lemma] = word_boost
