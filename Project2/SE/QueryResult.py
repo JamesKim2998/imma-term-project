@@ -226,7 +226,7 @@ def get_google_result(q: str):
     word_sets = []
     try:
         gs = GoogleSearch(q)
-        gs.results_per_page = 10
+        gs.results_per_page = 25
         results = gs.get_results()
         for res in results:
             # word_sets += preprocess_text(res.title, True)
@@ -253,7 +253,7 @@ def calculate_google_boost(word_sets: list) -> dict:
     boost_base = 2
     for (lemma, count) in word_count.items():
         freq = get_freq(lemma)
-        if count / freq < 0.04:
+        if count / freq < 0.08:
             continue
         word_boost = boost_base * math.pow(count / freq, 0.28)
         results[lemma] = word_boost
