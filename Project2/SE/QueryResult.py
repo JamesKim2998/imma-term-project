@@ -87,7 +87,7 @@ def process_query(query: str) -> str:
             google_result = get_google_result(query)
             google_boost = calculate_google_boost(google_result)
             for (lemma, boost) in google_boost.items():
-                add_query_word(lemma, boost)
+                plus_query_word(lemma, boost)
         except Exception as e:
             print(e)
 
